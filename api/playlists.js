@@ -9,9 +9,12 @@ import {
 } from "#db/queries/playlists";
 import { createPlaylistTrack } from "#db/queries/playlists_tracks";
 import { getTracksByPlaylistId } from "#db/queries/tracks";
+import requireUser from "#middleware/requireUser";
+
+router.use(requireUser);
 
 router.get("/", async (req, res) => {
-  const playlists = await getPlaylists();
+  const playlists = await getPlaylists(req.user.id);
   res.send(playlists);
 });
 
@@ -22,7 +25,7 @@ router.post("/", async (req, res) => {
   if (!name || !description)
     return res.status(400).send("Request body requires: name, description");
 
-  const playlist = await createPlaylist(name, description);
+  const playlist = await createPlaylist(req.user.id, name, description);
   res.status(201).send(playlist);
 });
 
@@ -35,6 +38,11 @@ router.param("id", async (req, res, next, id) => {
 });
 
 router.get("/:id", (req, res) => {
+  if (req.user.id !== req.playlist.user_id) {
+    return res
+      .status(403)
+      .send("You are not authorized to view this playlist.");
+  }
   res.send(req.playlist);
 });
 
